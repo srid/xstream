@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DeleteTweets — Bulk delete old X.com posts</title>
-  <meta name="description" content="Free tool to bulk-delete your old X.com (Twitter) tweets, replies, and retweets from the browser.">
+  <title>XStream — Use X as a stream, not an archive</title>
+  <meta name="description" content="Free tool to auto-delete your old X.com (Twitter) tweets, replies, and retweets. Use X as a stream, not a permanent archive.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -46,15 +46,15 @@
     .hero-icon {
       width: 72px; height: 72px; margin: 0 auto 20px;
       border-radius: 18px;
-      background: linear-gradient(135deg, var(--accent), #4a3f8a);
+      background: linear-gradient(135deg, #1d9bf0, var(--accent));
       display: flex; align-items: center; justify-content: center;
       font-size: 36px;
-      box-shadow: 0 8px 32px rgba(121,75,196,.35);
+      box-shadow: 0 8px 32px rgba(29,155,240,.3);
     }
     .hero h1 {
       font-size: 40px; font-weight: 900; letter-spacing: -1px;
       background: linear-gradient(135deg, var(--text), var(--accent));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       margin-bottom: 12px;
     }
     .hero p {
@@ -197,9 +197,9 @@
 
     <!-- Hero -->
     <div class="hero">
-      <div class="hero-icon">🗑️</div>
-      <h1>DeleteTweets</h1>
-      <p>Bulk-delete your old X.com posts, replies &amp; retweets — right from your browser. No signup, no API keys, no data shared.</p>
+      <div class="hero-icon">𝕏</div>
+      <h1>XStream</h1>
+      <p>Use X as a stream, not an archive. Auto-delete your old posts, replies &amp; retweets — right from your browser. No signup, no API keys, no data shared.</p>
     </div>
 
     <!-- What it does -->
@@ -226,7 +226,7 @@
       <p>Drag this button to your <strong>bookmarks bar</strong>. Then visit <strong>x.com</strong> and click it.</p>
       <div class="bookmarklet-wrap">
         <a class="bookmarklet-btn" id="bookmarklet" href="#">
-          🗑️ DeleteTweets
+          𝕏 XStream
         </a>
       </div>
       <p class="drag-hint">⬆ <em>Drag</em> the button above into your bookmarks bar</p>
@@ -274,7 +274,7 @@ const MAX_ERRORS = 15;              // stop after N consecutive errors</pre>
     </div>
 
     <div class="footer">
-      Made for personal use · Uses X.com internal APIs which may change
+      XStream · Use X as a stream · Uses X.com internal APIs which may change
     </div>
   </div>
 

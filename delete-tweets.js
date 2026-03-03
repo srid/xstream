@@ -1,5 +1,5 @@
 // ============================================================
-// X.com Post Deleter — paste in browser console while on x.com
+// XStream — Use X as a stream, not an archive
 // Deletes tweets, replies & retweets older than DAYS_OLD days
 // ============================================================
 (async () => {
@@ -164,7 +164,7 @@
     </style>
     <div id="__dt_box">
       <div id="__dt_spinner_wrap"><div id="__dt_spinner" style="display:inline-block"></div></div>
-      <div id="__dt_title">DeleteTweets is running…</div>
+      <div id="__dt_title">XStream is running…</div>
       <div id="__dt_section_label">Recently Deleted</div>
       <div id="__dt_log"></div>
       <div id="__dt_counters">
@@ -385,10 +385,10 @@
   if (spinner) spinner.style.animation = "none";
   if (spinner) spinner.style.borderTopColor = stopped ? "#f4212e" : "#5cb85c";
   elTitle.textContent = stopped
-    ? `Stopped — deleted ${nDel} posts`
-    : `Done — deleted ${nDel} posts`;
+    ? `XStream stopped — deleted ${nDel} posts`
+    : `XStream done — deleted ${nDel} posts`;
   elStop.textContent = "Close";
   elStop.onclick = () => modal.remove();
 
-  console.log(`✅ DeleteTweets finished. Read: ${nRead}, Found: ${nFind}, Deleted: ${nDel}`);
+  console.log(`✅ XStream finished. Read: ${nRead}, Found: ${nFind}, Deleted: ${nDel}`);
 })();
