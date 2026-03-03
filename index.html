@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeleteTweets — Bulk delete old X.com posts</title>
+  <meta name="description" content="Free tool to bulk-delete your old X.com (Twitter) tweets, replies, and retweets from the browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d0f12;
+      --surface:  #16181c;
+      --surface2: #1d1f23;
+      --border:   #2f3336;
+      --text:     #e7e9ea;
+      --text2:    #71767b;
+      --accent:   #794bc4;
+      --blue:     #4a9eed;
+      --red:      #f4212e;
+      --green:    #5cb85c;
+      --orange:   #f4724a;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 60px 24px 80px;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+    .hero-icon {
+      width: 72px; height: 72px; margin: 0 auto 20px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--accent), #4a3f8a);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      box-shadow: 0 8px 32px rgba(121,75,196,.35);
+    }
+    .hero h1 {
+      font-size: 40px; font-weight: 900; letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--text), var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+    .hero p {
+      font-size: 17px; color: var(--text2); max-width: 480px; margin: 0 auto;
+    }
+
+    /* ── Cards ───────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 28px 24px;
+      margin-bottom: 24px;
+    }
+    .card h2 {
+      font-size: 18px; font-weight: 700; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card h2 .badge {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; padding: 3px 8px; border-radius: 4px;
+    }
+    .badge-best { background: #1a4d2e; color: var(--green); }
+    .badge-alt  { background: #1d3a5f; color: var(--blue); }
+
+    .card p, .card li {
+      font-size: 14px; color: var(--text2); line-height: 1.7;
+    }
+    .card ol {
+      padding-left: 20px; margin-top: 8px;
+    }
+    .card li { margin-bottom: 6px; }
+    .card li strong { color: var(--text); }
+
+    /* ── Bookmarklet button ──────────────────────────── */
+    .bookmarklet-wrap {
+      text-align: center;
+      margin: 20px 0 8px;
+    }
+    .bookmarklet-btn {
+      display: inline-block;
+      padding: 14px 36px;
+      background: linear-gradient(135deg, var(--accent), #5a3da0);
+      color: #fff;
+      font-size: 16px; font-weight: 700;
+      border-radius: 50px;
+      text-decoration: none;
+      box-shadow: 0 4px 20px rgba(121,75,196,.4);
+      transition: transform .15s, box-shadow .15s;
+      cursor: grab;
+    }
+    .bookmarklet-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(121,75,196,.5);
+    }
+    .bookmarklet-btn:active { cursor: grabbing; }
+
+    .drag-hint {
+      font-size: 12px; color: var(--text2); text-align: center;
+      margin-top: 10px;
+    }
+    .drag-hint em { color: var(--accent); font-style: normal; font-weight: 600; }
+
+    /* ── Code block ──────────────────────────────────── */
+    .code-wrap {
+      position: relative;
+      margin-top: 14px;
+    }
+    .code-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      color: var(--blue);
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.5;
+    }
+    .copy-btn {
+      position: absolute; top: 8px; right: 8px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text2); font-size: 12px; font-weight: 600;
+      padding: 5px 12px; border-radius: 6px; cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .copy-btn:hover { background: var(--accent); color: #fff; }
+
+    /* ── Config section ──────────────────────────────── */
+    .config-note {
+      margin-top: 14px; padding: 14px 16px;
+      background: rgba(121,75,196,.08);
+      border: 1px solid rgba(121,75,196,.2);
+      border-radius: 10px;
+      font-size: 13px; color: var(--text2);
+    }
+    .config-note code {
+      background: var(--surface2); padding: 2px 6px; border-radius: 4px;
+      color: var(--accent); font-size: 12px;
+    }
+
+    /* ── Warning ────────────────────────────────────── */
+    .warning {
+      margin-top: 14px; padding: 14px 16px;
+      background: rgba(244,33,46,.06);
+      border: 1px solid rgba(244,33,46,.15);
+      border-radius: 10px;
+      font-size: 13px; color: var(--text2);
+    }
+    .warning strong { color: var(--red); }
+
+    /* ── Feature pills ──────────────────────────────── */
+    .features {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-top: 12px;
+    }
+    .pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 13px; font-weight: 500;
+      color: var(--text2);
+    }
+    .pill span { margin-right: 6px; }
+
+    /* ── Footer ─────────────────────────────────────── */
+    .footer {
+      text-align: center;
+      margin-top: 48px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+    .footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-icon">🗑️</div>
+      <h1>DeleteTweets</h1>
+      <p>Bulk-delete your old X.com posts, replies &amp; retweets — right from your browser. No signup, no API keys, no data shared.</p>
+    </div>
+
+    <!-- What it does -->
+    <div class="card">
+      <h2>What it does</h2>
+      <div class="features">
+        <div class="pill"><span>📝</span> Deletes tweets</div>
+        <div class="pill"><span>💬</span> Deletes replies</div>
+        <div class="pill"><span>🔁</span> Removes retweets</div>
+        <div class="pill"><span>📅</span> Filters by age</div>
+        <div class="pill"><span>📊</span> Live progress UI</div>
+        <div class="pill"><span>🛑</span> Stop anytime</div>
+      </div>
+      <p style="margin-top:14px">
+        Scans your timeline page-by-page using X.com's own internal API, filters posts
+        older than <strong>30&nbsp;days</strong> (configurable), and deletes them one by one
+        with rate-limit-friendly delays. A dark overlay shows live progress.
+      </p>
+    </div>
+
+    <!-- Method 1: Bookmarklet -->
+    <div class="card">
+      <h2><span class="badge badge-best">Easiest</span> Bookmarklet</h2>
+      <p>Drag this button to your <strong>bookmarks bar</strong>. Then visit <strong>x.com</strong> and click it.</p>
+      <div class="bookmarklet-wrap">
+        <a class="bookmarklet-btn" id="bookmarklet" href="#">
+          🗑️ DeleteTweets
+        </a>
+      </div>
+      <p class="drag-hint">⬆ <em>Drag</em> the button above into your bookmarks bar</p>
+      <div class="warning">
+        <strong>⚠️ Note:</strong> You must be <strong>logged into x.com</strong> when you click the bookmarklet.
+        Deletions are <strong>permanent</strong> and cannot be undone.
+      </div>
+    </div>
+
+    <!-- Method 2: Console -->
+    <div class="card">
+      <h2><span class="badge badge-alt">Alternative</span> Browser Console</h2>
+      <p>Open <strong>x.com</strong>, press <strong>F12</strong> → Console tab, then paste:</p>
+      <div class="code-wrap">
+        <pre class="code-block" id="consoleCode"></pre>
+        <button class="copy-btn" onclick="copyCode()">Copy</button>
+      </div>
+    </div>
+
+    <!-- Config -->
+    <div class="card">
+      <h2>⚙️ Configuration</h2>
+      <p>To change how far back to delete, edit the top of <code>delete-tweets.js</code>:</p>
+      <div class="code-wrap">
+        <pre class="code-block">const DAYS_OLD = 30;                // posts older than 30 days
+const DELAY_BETWEEN_DELETES = 1200; // ms between API calls
+const MAX_ERRORS = 15;              // stop after N consecutive errors</pre>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="card">
+      <h2>🔍 How it works</h2>
+      <ol>
+        <li>Reads your <strong>CSRF token</strong> and <strong>user ID</strong> from cookies (no passwords sent anywhere)</li>
+        <li>Calls the <strong>UserTweetsAndReplies</strong> GraphQL query to page through your timeline</li>
+        <li>Filters to posts <strong>older than N days</strong></li>
+        <li>Calls the <strong>DeleteTweet</strong> mutation for each matching post</li>
+        <li>Shows a <strong>live progress modal</strong> — you can stop anytime</li>
+      </ol>
+      <div class="config-note">
+        💡 Everything runs <strong>locally in your browser</strong> using your existing X.com session.
+        No data is sent to any third-party server.
+      </div>
+    </div>
+
+    <div class="footer">
+      Made for personal use · Uses X.com internal APIs which may change
+    </div>
+  </div>
+
+  <script>
+    // Build the script URL from the current page location
+    const scriptUrl = new URL('delete-tweets.js', window.location.href).href;
+
+    // Console one-liner
+    const oneLiner = `fetch('${scriptUrl}').then(r=>r.text()).then(eval)`;
+    document.getElementById('consoleCode').textContent = oneLiner;
+
+    // Bookmarklet href
+    const bookmarkletCode = `javascript:void(fetch('${scriptUrl}').then(r=>r.text()).then(eval))`;
+    document.getElementById('bookmarklet').href = bookmarkletCode;
+
+    function copyCode() {
+      navigator.clipboard.writeText(oneLiner).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        btn.style.background = 'var(--green)';
+        btn.style.color = '#fff';
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.style.background = '';
+          btn.style.color = '';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
