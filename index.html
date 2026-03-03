@@ -212,6 +212,7 @@
         <div class="pill"><span>📅</span> Filters by age</div>
         <div class="pill"><span>📊</span> Live progress UI</div>
         <div class="pill"><span>🛑</span> Stop anytime</div>
+        <div class="pill"><span>🔧</span> Auto-configures</div>
       </div>
       <p style="margin-top:14px">
         Scans your timeline page-by-page using X.com's own internal API, filters posts
@@ -262,6 +263,7 @@ const MAX_ERRORS = 15;              // stop after N consecutive errors</pre>
       <h2>🔍 How it works</h2>
       <ol>
         <li>Reads your <strong>CSRF token</strong> and <strong>user ID</strong> from cookies (no passwords sent anywhere)</li>
+        <li><strong>Auto-discovers API endpoints</strong> by scanning X.com's loaded JS bundles — no manual config needed even when X rotates IDs</li>
         <li>Calls the <strong>UserTweetsAndReplies</strong> GraphQL query to page through your timeline</li>
         <li>Filters to posts <strong>older than N days</strong></li>
         <li>Calls the <strong>DeleteTweet</strong> mutation for each matching post</li>

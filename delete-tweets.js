@@ -11,10 +11,53 @@
   const DELAY_BETWEEN_PAGES   = 2000; // ms between pagination calls
   const MAX_ERRORS = 15;              // stop after this many consecutive errors
 
-  // ── API CONSTANTS (from X.com frontend) ───────────────────
+  // ── API CONSTANTS ──────────────────────────────────────────
   const BEARER = "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
-  const DELETE_QUERY_ID = "nxpZCY2K-I6QoFHAHeojFQ";
-  const TWEETS_QUERY_ID = "9ESiiRo8Mhb_jqNIxduCgA";
+
+  // Fallbacks — only used if auto-discovery fails
+  const FALLBACK_DELETE_ID = "nxpZCY2K-I6QoFHAHeojFQ";
+  const FALLBACK_TWEETS_ID = "9ESiiRo8Mhb_jqNIxduCgA";
+
+  // ── AUTO-DISCOVER QUERY IDS ───────────────────────────────
+  // X.com bundles contain objects like:
+  //   {queryId:"abc123",operationName:"DeleteTweet",operationType:"mutation"}
+  // We fetch the loaded JS bundles and regex-match these patterns.
+  async function discoverQueryIds() {
+    const needed = { DeleteTweet: null, UserTweetsAndReplies: null };
+    const scripts = [...document.querySelectorAll('script[src]')]
+      .map(s => s.src)
+      .filter(src => src.includes('/client-web/') || src.includes('/api/'));
+
+    // Also check link[rel=preload] for JS bundles
+    const preloads = [...document.querySelectorAll('link[rel="preload"][as="script"]')]
+      .map(l => l.href);
+
+    const urls = [...new Set([...scripts, ...preloads])];
+
+    for (const url of urls) {
+      if (needed.DeleteTweet && needed.UserTweetsAndReplies) break;
+      try {
+        const text = await fetch(url, { credentials: "omit" }).then(r => r.text());
+        for (const op of Object.keys(needed)) {
+          if (needed[op]) continue;
+          // Match patterns like: queryId:"abc",operationName:"DeleteTweet"
+          // or: operationName:"DeleteTweet",...,queryId:"abc"
+          const re1 = new RegExp(`queryId:"([^"]+)",operationName:"${op}"`);
+          const re2 = new RegExp(`operationName:"${op}"[^}]*queryId:"([^"]+)"`);
+          const m = text.match(re1) || text.match(re2);
+          if (m) needed[op] = m[1];
+        }
+      } catch { /* skip inaccessible scripts */ }
+    }
+    return needed;
+  }
+
+  console.log("🔍 XStream: auto-discovering API endpoints…");
+  const discovered = await discoverQueryIds();
+  const DELETE_QUERY_ID = discovered.DeleteTweet || FALLBACK_DELETE_ID;
+  const TWEETS_QUERY_ID = discovered.UserTweetsAndReplies || FALLBACK_TWEETS_ID;
+  console.log(`   DeleteTweet:          ${DELETE_QUERY_ID}${discovered.DeleteTweet ? " ✓" : " (fallback)"}`);
+  console.log(`   UserTweetsAndReplies: ${TWEETS_QUERY_ID}${discovered.UserTweetsAndReplies ? " ✓" : " (fallback)"}`);
 
   const FEATURES = {
     rweb_video_screen_enabled: false,
