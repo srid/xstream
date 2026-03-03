@@ -281,19 +281,33 @@ const MAX_ERRORS = 15;              // stop after N consecutive errors</pre>
   </div>
 
   <script>
-    // Build the script URL from the current page location
-    const scriptUrl = new URL('delete-tweets.js', window.location.href).href;
+    // Fetch the script at page-load (same-origin, no CSP issue)
+    // then inline it into the bookmarklet and console code block.
+    // This way, on x.com the full script runs inline — no external fetch needed.
+    (async () => {
+      const scriptUrl = new URL('delete-tweets.js', window.location.href).href;
+      let scriptText = '';
+      try {
+        scriptText = await fetch(scriptUrl).then(r => r.text());
+      } catch {
+        scriptText = '// ⚠ Could not load delete-tweets.js — check console';
+      }
 
-    // Console one-liner
-    const oneLiner = `fetch('${scriptUrl}').then(r=>r.text()).then(eval)`;
-    document.getElementById('consoleCode').textContent = oneLiner;
+      // Console: show the full script to copy-paste
+      document.getElementById('consoleCode').textContent = scriptText;
 
-    // Bookmarklet href
-    const bookmarkletCode = `javascript:void(fetch('${scriptUrl}').then(r=>r.text()).then(eval))`;
-    document.getElementById('bookmarklet').href = bookmarkletCode;
+      // Bookmarklet: inline the full script into a javascript: URL
+      // encodeURIComponent handles special chars safely
+      const bookmarkletHref = 'javascript:void(' + encodeURIComponent(scriptText) + ')';
+      document.getElementById('bookmarklet').href = bookmarkletHref;
+
+      // Also store for the copy button
+      window.__xstreamScript = scriptText;
+    })();
 
     function copyCode() {
-      navigator.clipboard.writeText(oneLiner).then(() => {
+      const text = window.__xstreamScript || document.getElementById('consoleCode').textContent;
+      navigator.clipboard.writeText(text).then(() => {
         const btn = document.querySelector('.copy-btn');
         btn.textContent = 'Copied!';
         btn.style.background = 'var(--green)';
