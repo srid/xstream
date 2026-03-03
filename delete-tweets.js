@@ -324,17 +324,21 @@
             console.log(`   ✓ Working endpoint: ${qid}/${opName}`);
             return resp.json();
           }
-          if (resp.status !== 404) {
-            throw new Error(`Fetch tweets failed: ${resp.status}`);
+          // Any 4xx (404, 422, etc.) = wrong queryId/operation combo, try next
+          if (resp.status >= 400 && resp.status < 500) {
+            console.log(`   ✗ ${qid}/${opName} → ${resp.status}, trying next…`);
+            continue;
           }
-          // 404 = try next candidate
+          // 5xx = server error, worth throwing
+          throw new Error(`Fetch tweets failed: ${resp.status}`);
         } catch (err) {
-          if (err.message.includes("404") || err.message.includes("Failed to fetch")) continue;
-          throw err;
+          if (err.message.includes("Failed to fetch")) continue;
+          if (err.message.includes("Fetch tweets failed")) throw err;
+          continue; // network errors = try next
         }
       }
     }
-    throw new Error("All tweet query endpoints returned 404. X may have changed their API.");
+    throw new Error("All tweet query endpoints failed. X may have changed their API.");
   }
 
   // ── DELETE TWEET ──────────────────────────────────────────
