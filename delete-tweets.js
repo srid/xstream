@@ -21,43 +21,56 @@
   // ── AUTO-DISCOVER QUERY IDS ───────────────────────────────
   // X.com bundles contain objects like:
   //   {queryId:"abc123",operationName:"DeleteTweet",operationType:"mutation"}
-  // We fetch the loaded JS bundles and regex-match these patterns.
+  // We search ALL loaded JS bundles and collect every matching queryId.
   async function discoverQueryIds() {
-    const needed = { DeleteTweet: null, UserTweetsAndReplies: null };
-    const scripts = [...document.querySelectorAll('script[src]')]
-      .map(s => s.src)
-      .filter(src => src.includes('/client-web/') || src.includes('/api/'));
+    const results = {};
+    const ops = ["DeleteTweet", "UserTweetsAndReplies", "UserTweets"];
 
-    // Also check link[rel=preload] for JS bundles
-    const preloads = [...document.querySelectorAll('link[rel="preload"][as="script"]')]
-      .map(l => l.href);
-
+    // Gather ALL script and preload URLs
+    const scripts = [...document.querySelectorAll('script[src]')].map(s => s.src);
+    const preloads = [...document.querySelectorAll('link[rel="preload"][as="script"]')].map(l => l.href);
     const urls = [...new Set([...scripts, ...preloads])];
 
+    console.log(`   Scanning ${urls.length} scripts…`);
+
     for (const url of urls) {
-      if (needed.DeleteTweet && needed.UserTweetsAndReplies) break;
       try {
         const text = await fetch(url, { credentials: "omit" }).then(r => r.text());
-        for (const op of Object.keys(needed)) {
-          if (needed[op]) continue;
-          // Match patterns like: queryId:"abc",operationName:"DeleteTweet"
-          // or: operationName:"DeleteTweet",...,queryId:"abc"
-          const re1 = new RegExp(`queryId:"([^"]+)",operationName:"${op}"`);
-          const re2 = new RegExp(`operationName:"${op}"[^}]*queryId:"([^"]+)"`);
-          const m = text.match(re1) || text.match(re2);
-          if (m) needed[op] = m[1];
+        for (const op of ops) {
+          // Multiple regex patterns to catch different minification styles
+          const patterns = [
+            new RegExp(`queryId:"([^"]+)",operationName:"${op}"`, 'g'),
+            new RegExp(`operationName:"${op}"[^}]{0,50}queryId:"([^"]+)"`, 'g'),
+            new RegExp(`queryId:"([^"]+)"[^}]{0,50}operationName:"${op}"`, 'g'),
+          ];
+          for (const re of patterns) {
+            let m;
+            while ((m = re.exec(text)) !== null) {
+              if (!results[op]) results[op] = [];
+              if (!results[op].includes(m[1])) results[op].push(m[1]);
+            }
+          }
         }
       } catch { /* skip inaccessible scripts */ }
     }
-    return needed;
+    return results;
   }
 
   console.log("🔍 XStream: auto-discovering API endpoints…");
   const discovered = await discoverQueryIds();
-  const DELETE_QUERY_ID = discovered.DeleteTweet || FALLBACK_DELETE_ID;
-  const TWEETS_QUERY_ID = discovered.UserTweetsAndReplies || FALLBACK_TWEETS_ID;
+
+  // For DeleteTweet: use first discovered or fallback
+  const DELETE_QUERY_ID = discovered.DeleteTweet?.[0] || FALLBACK_DELETE_ID;
+
+  // For tweets: collect candidates from both operation names + fallback
+  const TWEETS_QUERY_CANDIDATES = [
+    ...(discovered.UserTweetsAndReplies || []),
+    ...(discovered.UserTweets || []),
+    FALLBACK_TWEETS_ID,
+  ].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
+
   console.log(`   DeleteTweet:          ${DELETE_QUERY_ID}${discovered.DeleteTweet ? " ✓" : " (fallback)"}`);
-  console.log(`   UserTweetsAndReplies: ${TWEETS_QUERY_ID}${discovered.UserTweetsAndReplies ? " ✓" : " (fallback)"}`);
+  console.log(`   Tweet query candidates: ${TWEETS_QUERY_CANDIDATES.join(", ")}`);
 
   const FEATURES = {
     rweb_video_screen_enabled: false,
@@ -268,6 +281,8 @@
   }
 
   // ── FETCH TWEETS ──────────────────────────────────────────
+  let _workingTweetsEndpoint = null; // cache once found
+
   async function fetchTweetsPage(cursor) {
     const variables = {
       userId,
@@ -285,13 +300,41 @@
       fieldToggles: JSON.stringify({ withArticlePlainText: false }),
     });
 
-    const resp = await fetch(
-      `https://x.com/i/api/graphql/${TWEETS_QUERY_ID}/UserTweetsAndReplies?${params}`,
-      { headers: headers(), credentials: "include" }
-    );
+    // If we already found a working endpoint, use it
+    if (_workingTweetsEndpoint) {
+      const resp = await fetch(
+        `https://x.com/i/api/graphql/${_workingTweetsEndpoint.id}/${_workingTweetsEndpoint.name}?${params}`,
+        { headers: headers(), credentials: "include" }
+      );
+      if (!resp.ok) throw new Error(`Fetch tweets failed: ${resp.status}`);
+      return resp.json();
+    }
 
-    if (!resp.ok) throw new Error(`Fetch tweets failed: ${resp.status}`);
-    return resp.json();
+    // Try each candidate queryId with both operation names
+    const opNames = ["UserTweetsAndReplies", "UserTweets"];
+    for (const qid of TWEETS_QUERY_CANDIDATES) {
+      for (const opName of opNames) {
+        try {
+          const resp = await fetch(
+            `https://x.com/i/api/graphql/${qid}/${opName}?${params}`,
+            { headers: headers(), credentials: "include" }
+          );
+          if (resp.ok) {
+            _workingTweetsEndpoint = { id: qid, name: opName };
+            console.log(`   ✓ Working endpoint: ${qid}/${opName}`);
+            return resp.json();
+          }
+          if (resp.status !== 404) {
+            throw new Error(`Fetch tweets failed: ${resp.status}`);
+          }
+          // 404 = try next candidate
+        } catch (err) {
+          if (err.message.includes("404") || err.message.includes("Failed to fetch")) continue;
+          throw err;
+        }
+      }
+    }
+    throw new Error("All tweet query endpoints returned 404. X may have changed their API.");
   }
 
   // ── DELETE TWEET ──────────────────────────────────────────
